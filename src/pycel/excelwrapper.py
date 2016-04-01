@@ -246,25 +246,32 @@ class ExcelOpxWrapper(ExcelWrapper):
         super(ExcelWrapper,self).__init__()
         
         self.filename = path.abspath(filename)
+        self.rangedNames = None
 
     @property
     def rangednames(self):
         if self.workbook == None:
             return None
 
-
-        rangednames = []
-
-        for named_range in self.workbook.get_named_ranges():
-            for worksheet, range_alias in named_range.destinations:
-                tuple_name = {
-                    'id': len(rangednames)+1,
-                    'name': str(named_range.name),
-                    'formula': str(worksheet.title+'!'+range_alias)
-                }
-                rangednames.append(tuple_name)
+        if self.rangedNames == None:
             
-        return rangednames
+            rangedNames = []
+
+            for named_range in self.workbook.get_named_ranges():
+                try:
+                    for worksheet, range_alias in named_range.destinations:
+                        tuple_name = {
+                            'id': len(rangedNames)+1,
+                            'name': str(named_range.name),
+                            'formula': str(worksheet.title+'!'+range_alias)
+                        }
+                        rangedNames.append(tuple_name)
+                except:
+                    print "error in rangednames, maybe due to offset"
+                    pass
+            self.rangedNames = rangedNames
+            
+        return self.rangedNames
     
 
     def connect(self):

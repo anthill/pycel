@@ -17,19 +17,19 @@ if __name__ == '__main__':
     
     print "Loading %s..." % fname
     
-    # load  & compile the file to a graph, starting from D1
+    # load  & compile the file to a graph, starting from D2
     c = ExcelCompiler(filename=fname)
     
-    print "Compiling..., starting from D1"
-    sp = c.gen_graph('D1',sheet='Sheet1')
+    print "Compiling..., starting from D2"
+    sp = c.gen_graph('D2',sheet='Sheet1')
     
     # test evaluation
-    print "D1 is %s" % sp.evaluate('Sheet1!D1')
+    print "D2 is %s" % sp.evaluate('Sheet1!D2')
     
     print "Setting A1 to 200"
     sp.set_value('Sheet1!A1',200)
     
-    print "D1 is now %s (the same should happen in Excel)" % sp.evaluate('Sheet1!D1')
+    print "D2 is now %s (the same should happen in Excel)" % sp.evaluate('Sheet1!D2')
     
     # show the graph usisng matplotlib
     print "Plotting using matplotlib..."

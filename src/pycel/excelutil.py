@@ -63,7 +63,7 @@ class Cell(object):
     
     def __init__(self, address, sheet, value=None, formula=None):
         super(Cell,self).__init__()
-        
+
         # remove $'s
         address = address.replace('$','')
         
@@ -205,7 +205,6 @@ class Cell(object):
             r = excel.get_range(range)
             fs = r.Formula
             vs = r.Value
-            print fs, vs
             
             for it in (list(izip(*x)) for x in izip(ads,fs,vs)):
                 row = []
