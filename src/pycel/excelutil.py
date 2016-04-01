@@ -4,6 +4,7 @@ import collections
 import functools
 import re
 import string
+import ast
 
 #TODO: only supports rectangular ranges
 class CellRange(object):
@@ -429,6 +430,7 @@ def uniqueify(seq):
     seen = set()
     seen_add = seen.add
     return [ x for x in seq if x not in seen and not seen_add(x)]
+
 
 if __name__ == '__main__':
     pass

@@ -18,6 +18,9 @@ from os import path
 import abc
 from abc import abstractproperty, abstractmethod
 
+import re
+import ast
+
 class ExcelWrapper(object):
     __metaclass__ = abc.ABCMeta
     
@@ -273,17 +276,80 @@ class ExcelOpxWrapper(ExcelWrapper):
 
             rangedNames = []
             for named_range in self.workbook.get_named_ranges():
-                try:
-                    for worksheet, range_alias in named_range.destinations:
+                #try:
+                    destinations = []
+                    
+                    if "OFFSET" in named_range.value:
+                        #print named_range.value
 
+                        def shift(offset):
+                            argx = offset.group(2)
+                            argy = offset.group(3)
+                            sheet_name, position = offset.group(1).split("!")
+                            return sheet_name + "!" + self.workbook[sheet_name][position].offset(self.parseOffsetArg(argx), self.parseOffsetArg(argy)).coordinate
+                        
+                        offsets = re.subn("OFFSET\((.+?),(.+?),(.+?)\)", shift, named_range.value)
+                        
+                        address = offsets[0]
+                        if offsets[1] > 1 :
+                            t = address.split('!')
+                            address = t[0] + "!" + t[1].split(":")[0] + ":" + t[2]
+
+                        s, range_alias = self.parseRange(address)
+                        destinations = [[self.workbook[s], range_alias]]
+                        #named_range.name = resultString
+
+                        # sheet_name, cells = self.parseRange(resultString)
+                        # if len(list(self.workbook[sheet_name][cells])) == 0:
+                        #     # the offset shifted the start/end
+                        #     sheet_name, cells = self.parseRange(resultString, True)
+                        # for row in self.workbook[sheet_name][cells]:
+                        #     for cell in row:
+                        #         named_range_set.add((sheet_name, cell))
+                    else :
+                        destinations = named_range.destinations
+
+                    for worksheet, range_alias in destinations:
+                        print worksheet.title, range_alias
                         tuple_name = (len(rangedNames)+1,  str(named_range.name), str(worksheet.title+'!'+range_alias))
                         rangedNames.append(tuple_name)
-                except:
-                    print "error in rangednames, maybe due to offset"
-                    pass
+                        #print tuple_name
+                #except:
+                #    print "error in rangednames, maybe due to offset"
+                #    pass
             self.rangedNames = rangedNames
 
         return self.rangedNames
+
+    def parseOffsetArg(self, arg):
+        if "COUNTA" in arg:
+            def evalCounta(y):
+                # compete fonctional version but takes too much time
+                cells = map(lambda x: x[0].value, self.workbook[y.group(1)][y.group(2)])
+                return str(len(filter(lambda x: x != None, cells)))
+
+            replacedString = re.subn("COUNTA\((.+?)!(.+?)\)", evalCounta, arg)[0].replace(" ", "")
+            node = ast.parse(replacedString, mode='eval')
+            return eval(compile(node, '<string>', mode='eval'))
+        elif "!" in arg:
+            sheet_name, position = arg.split("!")
+            return int(self.workbookDO[sheet_name][position].value)
+        else:
+            try:
+                return int(arg)
+            except:
+                raise Exception('method embedded in OFFSET formula not implemented')
+
+    def parseRange(self, rangeString, invert = False):
+        # InputData!$J$60:$J$63 => 'InputData', '$J$60:$J$63'
+        parts = rangeString.split("!")
+        sheet_name = parts[0]
+        parts2 = parts[1].split(":")
+        if invert:
+            cells = parts2[1] + ":" + parts2[0]
+        else:
+            cells = parts2[0] + ":" + parts2[1]
+        return sheet_name, cells
 
     def connect(self):
         self.workbook = load_workbook(self.filename)
