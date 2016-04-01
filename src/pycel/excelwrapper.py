@@ -1,3 +1,14 @@
+#       ExcelComWrapper : Must be run on Windows as it requires a COM link to an Excel instance.
+#       ExcelOpxWrapper : Can be run anywhere but only with post 2010 Excel formats
+try:
+    import win32com.client
+    from win32com.client import Dispatch
+    from win32com.client import constants 
+    import pythoncom
+    import numpy as np
+except:
+    pass
+
 from openpyxl import load_workbook
 from openpyxl.cell import Cell
 
@@ -12,7 +23,6 @@ class ExcelWrapper(object):
     
     @abstractproperty
     def rangednames(self):
-        """Array of name_range with format { 'id':..., 'name':..., 'formula':... }"""
         return
     
     @abstractmethod
@@ -123,23 +133,11 @@ class ExcelComWrapper(ExcelWrapper):
         
         self.filename = path.abspath(filename)
         self.app = app
-        
-        # WARNING: by default numpy array require dtype declaration to specify character length (here 'S200', i.e. 200 characters)
-        # WARNING: win32.com cannot get ranges with single column/line, would require way to read Office Open XML
-        # TODO: automate detection of max string length to set up numpy array accordingly
-        # TODO: discriminate between worksheet & workbook ranged names
-        
-        self._rangednames = np.zeros(shape = (int(self.app.ActiveWorkbook.Names.Count),1), dtype=[('id', 'int_'), ('name', 'S200'), ('formula', 'S200')])
-        for i in range(0, self.app.ActiveWorkbook.Names.Count):
-            self._rangednames[i]['id'] = int(i+1)       
-            self._rangednames[i]['name'] = str(self.app.ActiveWorkbook.Names.Item(i+1).Name)        
-            self._rangednames[i]['formula'] = str(self.app.ActiveWorkbook.Names.Item(i+1).Value)
-    
+            
     @property
     def rangednames(self):
         return self._rangednames
     
-
     def connect(self):
         #http://devnulled.com/content/2004/01/com-objects-and-threading-in-python/
         # TODO: dont need to uninit?
@@ -149,9 +147,19 @@ class ExcelComWrapper(ExcelWrapper):
             self.app.Visible = True
             self.app.DisplayAlerts = 0
             self.app.Workbooks.Open(self.filename)
-        else:
-            # if we are running as an excel addin, this gets passed to us
-            pass
+        # else -> if we are running as an excel addin, this gets passed to us
+        
+        # Range Names reading
+        # WARNING: by default numpy array require dtype declaration to specify character length (here 'S200', i.e. 200 characters)
+        # WARNING: win32.com cannot get ranges with single column/line, would require way to read Office Open XML
+        # TODO: automate detection of max string length to set up numpy array accordingly
+        # TODO: discriminate between worksheet & workbook ranged names
+        self._rangednames = np.zeros(shape = (int(self.app.ActiveWorkbook.Names.Count),1), dtype=[('id', 'int_'), ('name', 'S200'), ('formula', 'S200')])
+        for i in range(0, self.app.ActiveWorkbook.Names.Count):
+            self._rangednames[i]['id'] = int(i+1)       
+            self._rangednames[i]['name'] = str(self.app.ActiveWorkbook.Names.Item(i+1).Name)        
+            self._rangednames[i]['formula'] = str(self.app.ActiveWorkbook.Names.Item(i+1).Value)
+
     
     def save(self):
         self.app.ActiveWorkbook.Save()
@@ -241,7 +249,7 @@ class OpxRange(object):
 # OpenPyXl implementation for ExcelWrapper interface
 class ExcelOpxWrapper(ExcelWrapper):
     
-    def __init__(self, filename):
+    def __init__(self, filename, app=None):
         
         super(ExcelWrapper,self).__init__()
         
@@ -250,6 +258,7 @@ class ExcelOpxWrapper(ExcelWrapper):
 
     @property
     def rangednames(self):
+
         if self.workbook == None:
             return None
 
@@ -260,17 +269,14 @@ class ExcelOpxWrapper(ExcelWrapper):
             for named_range in self.workbook.get_named_ranges():
                 try:
                     for worksheet, range_alias in named_range.destinations:
-                        tuple_name = {
-                            'id': len(rangedNames)+1,
-                            'name': str(named_range.name),
-                            'formula': str(worksheet.title+'!'+range_alias)
-                        }
+
+                        tuple_name = (len(rangedNames)+1,  str(named_range.name), str(worksheet.title+'!'+range_alias))
                         rangedNames.append(tuple_name)
                 except:
                     print "error in rangednames, maybe due to offset"
                     pass
             self.rangedNames = rangedNames
-            
+            print rangedNames
         return self.rangedNames
     
 

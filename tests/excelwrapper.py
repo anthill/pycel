@@ -1,3 +1,12 @@
+# We will choose our wrapper with os compatibility
+try:
+    import win32com.client
+    import pythoncom
+    from pycel.excelwrapper import ExcelComWrapper as ExcelWrapperImpl
+except:
+    print "Can\'t import win32com -> switch from Com to Openpyxl wrapping implementation"
+    from pycel.excelwrapper import ExcelOpxWrapper as ExcelWrapperImpl
+
 import os
 import sys
 
@@ -5,11 +14,8 @@ dir = os.path.dirname(__file__)
 path = os.path.join(dir, '../src')
 sys.path.insert(0, path)
 
-from pycel.excelwrapper import ExcelOpxWrapper
-
 # RUN AT THE ROOT LEVEL
-excel = ExcelOpxWrapper(os.path.join(dir, "../example/example.xlsx"))
-
+excel = ExcelWrapperImpl(os.path.join(dir, "../example/example.xlsx"))
 
 def connect():
     connected = True
@@ -28,10 +34,10 @@ def save_as():
     excel.save_as(path_copy)
     assert os.path.exists(path_copy) == True
 
-def set_and_get_active():
+def set_and_get_active_sheet():
     excel.connect()
     excel.set_sheet("Sheet3")
-    assert excel.get_sheet().title == "Sheet3"
+    assert excel.get_active_sheet() == 'Sheet3'
 
 def get_range():
     excel.connect()
@@ -40,13 +46,7 @@ def get_range():
 
 def get_used_range():
     excel.connect()
-    assert sum(map(len,excel.get_used_range())) == (excel.get_sheet().max_column * excel.get_sheet().max_row)
     assert sum(map(len,excel.get_used_range())) == 72
-
-def get_active_sheet():
-    excel.connect()
-    excel.set_sheet("Sheet3")
-    assert excel.get_active_sheet() == 'Sheet3'
 
 def get_value():
     excel.connect()
@@ -79,11 +79,11 @@ def get_row():
 
 def get_ranged_names():
     excel.connect()
-    assert excel.rangednames == [{'formula': 'Sheet1!$C$1:$C$18', 'id': 1, 'name': 'SINUS'}]
+    assert excel.rangednames == [(1,'SINUS','Sheet1!$C$1:$C$18')]
 
 connect()
-save_as()
-set_and_get_active()
+#save_as() # to disable with COM instance running 
+set_and_get_active_sheet()
 get_range()
 get_used_range()
 get_active_sheet()
