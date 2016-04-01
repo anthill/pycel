@@ -243,6 +243,12 @@ class RangeNode(OperandNode):
     def emit(self,ast,context=None):
         # resolve the range into cells
         rng = self.tvalue.replace('$','')
+        
+        names = dict(map(lambda x: (x[1], x[2].replace("$", "")), context.excel.rangednames))
+                
+        if rng in names.keys():
+            rng = names[rng]
+
         sheet = context.curcell.sheet + "!" if context else ""
         if is_range(rng):
             sh,start,end = split_range(rng)
@@ -649,8 +655,16 @@ class ExcelCompiler(object):
             
             # remove dupes
             deps = uniqueify(deps)
-            
+            names = dict(map(lambda x: (x[1], x[2].replace("$", "").split("!")[-1]), self.excel.rangednames))
+
+            corrected_deps = []
             for dep in deps:
+                if dep in names.keys():
+                    corrected_deps += [names[dep]]
+                else:
+                    corrected_deps += [dep]
+            
+            for dep in corrected_deps:
                 
                 # if the dependency is a multi-cell range, create a range object
                 if is_range(dep):

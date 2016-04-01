@@ -16,7 +16,7 @@ if __name__ == '__main__':
     
     print "Loading %s..." % fname
     
-    # load  & compile the file to a graph, starting from D1
+    # load  & compile the file to a graph, starting from D2
     c = ExcelCompiler(filename=fname)
     
     print "Compiling..., starting from D1"
