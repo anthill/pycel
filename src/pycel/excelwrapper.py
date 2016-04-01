@@ -276,7 +276,7 @@ class ExcelOpxWrapper(ExcelWrapper):
                     print "error in rangednames, maybe due to offset"
                     pass
             self.rangedNames = rangedNames
-            print rangedNames
+
         return self.rangedNames
     
 
