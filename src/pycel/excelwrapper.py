@@ -277,34 +277,29 @@ class ExcelOpxWrapper(ExcelWrapper):
 
             rangedNames = []
             for named_range in self.workbook.get_named_ranges():
-                #try:
-                    destinations = []
+                destinations = []
+                
+                if "OFFSET" in named_range.value:
+
+                    address, nb_offset = parseOffsets(named_range.value, self.workbook, self.workbookDO)
+                    if nb_offset > 1 :
+                        t = address.split('!')
+                        address = t[0] + "!" + t[1].split(":")[0] + ":" + t[2]
+
+                    sheet_name, range_alias = parseRange(address)
+
+                    if len(list(self.workbook[sheet_name][range_alias])) == 0:
+                        # the offset shifted the start/end
+                        sheet_name, range_alias = parseRange(address, True)
+
+                    destinations = [[self.workbook[sheet_name], range_alias]]
                     
-                    if "OFFSET" in named_range.value:
+                else :
+                    destinations = named_range.destinations
 
-                        address, nb_offset = parseOffsets(named_range.value, self.workbook, self.workbookDO)
-                        if nb_offset > 1 :
-                            t = address.split('!')
-                            address = t[0] + "!" + t[1].split(":")[0] + ":" + t[2]
-
-                        s, range_alias = parseRange(address)
-                        destinations = [[self.workbook[s], range_alias]]
-                        #named_range.name = resultString
-
-                        # sheet_name, cells = self.parseRange(resultString)
-                        # if len(list(self.workbook[sheet_name][cells])) == 0:
-                        #     # the offset shifted the start/end
-                        #     sheet_name, cells = self.parseRange(resultString, True)
-                        # for row in self.workbook[sheet_name][cells]:
-                        #     for cell in row:
-                        #         named_range_set.add((sheet_name, cell))
-                    else :
-                        destinations = named_range.destinations
-
-                    for worksheet, range_alias in destinations:
-                        print worksheet.title, range_alias
-                        tuple_name = (len(rangedNames)+1,  str(named_range.name), str(worksheet.title+'!'+range_alias))
-                        rangedNames.append(tuple_name)
+                for worksheet, range_alias in destinations:
+                    tuple_name = (len(rangedNames)+1,  str(named_range.name), str(worksheet.title+'!'+range_alias))
+                    rangedNames.append(tuple_name)
 
             self.rangedNames = rangedNames
 
