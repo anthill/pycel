@@ -432,5 +432,48 @@ def uniqueify(seq):
     return [ x for x in seq if x not in seen and not seen_add(x)]
 
 
+def parseRange(rangeString, invert = False):
+    # InputData!$J$60:$J$63 => 'InputData', '$J$60:$J$63'
+    parts = rangeString.split("!")
+    sheet_name = parts[0]
+    parts2 = parts[1].split(":")
+    if invert:
+        cells = parts2[1] + ":" + parts2[0]
+    else:
+        cells = parts2[0] + ":" + parts2[1]
+    return sheet_name, cells
+
+def parseOffsets(formula, workbook, workbookDO):
+
+    def parseOffsetArg(arg):
+        if "COUNTA" in arg:
+            def evalCounta(y):
+                # compete fonctional version but takes too much time
+                cells = map(lambda x: x[0].value, workbook[y.group(1)][y.group(2)])
+                return str(len(filter(lambda x: x != None, cells)))
+
+            replacedString = re.subn("COUNTA\((.+?)!(.+?)\)", evalCounta, arg)[0].replace(" ", "")
+            node = ast.parse(replacedString, mode='eval')
+            return eval(compile(node, '<string>', mode='eval'))
+        elif "!" in arg:
+            sheet_name, position = arg.split("!")
+            return int(workbookDO[sheet_name][position].value)
+        else:
+            try:
+                return int(arg)
+            except:
+                raise Exception('method embedded in OFFSET formula not implemented')
+
+    def shift(offset):
+            argx = offset.group(2)
+            argy = offset.group(3)
+            sheet_name, position = offset.group(1).split("!")
+            return sheet_name + "!" + workbook[sheet_name][position].offset(parseOffsetArg(argx), parseOffsetArg(argy)).coordinate
+        
+    offsets = re.subn("OFFSET\((.+?),(.+?),(.+?)\)", shift, formula)
+    
+    return offsets
+
+
 if __name__ == '__main__':
     pass
