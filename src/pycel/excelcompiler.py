@@ -243,11 +243,6 @@ class RangeNode(OperandNode):
     def emit(self,ast,context=None):
         # resolve the range into cells
         rng = self.tvalue.replace('$','')
-        
-        names = dict(map(lambda x: (x[1], x[2].replace("$", "")), context.excel.rangednames))
-                
-        if rng in names.keys():
-            rng = names[rng]
 
         sheet = context.curcell.sheet + "!" if context else ""
         if is_range(rng):
@@ -366,7 +361,7 @@ class Operator:
         self.precedence = precedence
         self.associativity = associativity
 
-def shunting_yard(expression):
+def shunting_yard(expression, names):
     """
     Tokenize an excel formula expression into reverse polish notation
     
@@ -398,7 +393,14 @@ def shunting_yard(expression):
         else:
             tokens.append(t)
 
-    #print "tokens: ", "|".join([x.tvalue for x in tokens])
+    # print "tokens: ", "|".join([x.tvalue for x in tokens])
+
+    # replace variables
+    for t in tokens:
+        k = t.tvalue
+        if k in names.keys():
+            t.tvalue = names[k]
+
 
     #http://office.microsoft.com/en-us/excel-help/calculation-operators-and-precedence-HP010078886.aspx
     operators = {}
@@ -576,13 +578,14 @@ class ExcelCompiler(object):
             # TODO: use a proper interface so we can (eventually) support loading from file (much faster)  Still need to find a good lib though.
             self.excel = ExcelWrapperImpl(filename=filename)
             self.excel.connect()
+            self.names = dict(map(lambda x: (x[1], x[2].replace("$", "")), self.excel.rangednames))
             
         self.log = logging.getLogger("decode.{0}".format(self.__class__.__name__))
         
     def cell2code(self,cell):
         """Generate python code for the given cell"""
         if cell.formula:
-            e = shunting_yard(cell.formula or str(cell.value))
+            e = shunting_yard(cell.formula or str(cell.value), self.names)
             ast,root = build_ast(e)
             code = root.emit(ast,context=Context(cell,self.excel))
         else:
@@ -636,10 +639,9 @@ class ExcelCompiler(object):
         while todo:
             c1 = todo.pop()
             
+
             print "Handling ", c1.address()
-            # print c1.formula
-            # sheet_name = c1.address().split("!")[0]
-            # print parseOffsets(c1.formula, self.excel.workbook, self.excel.workbookDO, original_sheet_name = sheet_name)
+            print c1.formula
             
             # set the current sheet so relative addresses resolve properly
             if c1.sheet != cursheet:
@@ -659,17 +661,7 @@ class ExcelCompiler(object):
             # remove dupes
             deps = uniqueify(deps)
 
-            # # replace variables by their cell equivalent
-            names = dict(map(lambda x: (x[1], x[2].replace("$", "").split("!")[-1]), self.excel.rangednames))
-
-            corrected_deps = []
             for dep in deps:
-                if dep in names.keys():
-                    corrected_deps += [names[dep]]
-                else:
-                    corrected_deps += [dep]
-            
-            for dep in corrected_deps:
                 
                 # if the dependency is a multi-cell range, create a range object
                 if is_range(dep):

@@ -452,8 +452,6 @@ class OffsetParser(object):
         self.cache = {}
 
     def parseOffsetArg(self, arg):
-        # replace variables
-        # names = dict(map(lambda x: (x[1], x[2].replace("$", "").split("!")[-1]), self.excel.rangednames))
 
         # evaluate
         if "COUNTA" in arg:

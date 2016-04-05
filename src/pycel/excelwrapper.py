@@ -266,7 +266,6 @@ class ExcelOpxWrapper(ExcelWrapper):
         
         self.filename = path.abspath(filename)
         self.rangedNames = None
-        self.OffsetParser = None
 
     @property
     def rangednames(self):
@@ -274,15 +273,15 @@ class ExcelOpxWrapper(ExcelWrapper):
         if self.workbook == None:
             return None
 
-        self.OffsetParser = OffsetParser(self.workbook, self.workbookDO)
-
         if self.rangedNames == None:
+            # parse all variables because it has never been done
 
             rangedNames = []
             for named_range in self.workbook.get_named_ranges():
                 destinations = []
                 
                 if "OFFSET" in named_range.value:
+                    print "Parsing variable containing an OFFSET"
 
                     address, nb_offset = self.OffsetParser.parseOffsets(named_range.value)
                     if nb_offset > 1 :
@@ -304,13 +303,15 @@ class ExcelOpxWrapper(ExcelWrapper):
                     tuple_name = (len(rangedNames)+1,  str(named_range.name), str(worksheet.title+'!'+range_alias))
                     rangedNames.append(tuple_name)
 
+            print "All variables parsed"
             self.rangedNames = rangedNames
 
         return self.rangedNames
 
     def connect(self):
         self.workbook = load_workbook(self.filename)
-        self.workbookDO = load_workbook(self.filename, data_only=True)
+        self.workbookDO = load_workbook(self.filename, read_only = True, data_only = True)
+        self.OffsetParser = OffsetParser(self.workbook, self.workbookDO)
 
     def save(self):
         self.workbook.save(self.filename)
