@@ -11,7 +11,7 @@ except:
 
 from openpyxl import load_workbook
 from openpyxl.cell import Cell
-from excelutil import parseOffsets, parseRange
+from excelutil import OffsetParser, parseRange
 
 import os
 from os import path
@@ -266,12 +266,15 @@ class ExcelOpxWrapper(ExcelWrapper):
         
         self.filename = path.abspath(filename)
         self.rangedNames = None
+        self.OffsetParser = None
 
     @property
     def rangednames(self):
 
         if self.workbook == None:
             return None
+
+        self.OffsetParser = OffsetParser(self.workbook, self.workbookDO)
 
         if self.rangedNames == None:
 
@@ -281,7 +284,7 @@ class ExcelOpxWrapper(ExcelWrapper):
                 
                 if "OFFSET" in named_range.value:
 
-                    address, nb_offset = parseOffsets(named_range.value, self.workbook, self.workbookDO)
+                    address, nb_offset = self.OffsetParser.parseOffsets(named_range.value)
                     if nb_offset > 1 :
                         t = address.split('!')
                         address = t[0] + "!" + t[1].split(":")[0] + ":" + t[2]

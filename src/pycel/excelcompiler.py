@@ -637,6 +637,9 @@ class ExcelCompiler(object):
             c1 = todo.pop()
             
             print "Handling ", c1.address()
+            # print c1.formula
+            # sheet_name = c1.address().split("!")[0]
+            # print parseOffsets(c1.formula, self.excel.workbook, self.excel.workbookDO, original_sheet_name = sheet_name)
             
             # set the current sheet so relative addresses resolve properly
             if c1.sheet != cursheet:
@@ -655,6 +658,8 @@ class ExcelCompiler(object):
             
             # remove dupes
             deps = uniqueify(deps)
+
+            # # replace variables by their cell equivalent
             names = dict(map(lambda x: (x[1], x[2].replace("$", "").split("!")[-1]), self.excel.rangednames))
 
             corrected_deps = []
