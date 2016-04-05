@@ -7,6 +7,12 @@ try:
     from pycel.excelwrapper import ExcelComWrapper as ExcelWrapperImpl
 except:
     print "Can\'t import win32com -> switch from Com to Openpyxl wrapping implementation"
+    import os
+    import sys
+
+    dir = os.path.dirname(__file__)
+    path = os.path.join(dir, '../')
+    sys.path.insert(0, path)
     from pycel.excelwrapper import ExcelOpxWrapper as ExcelWrapperImpl
 
 import excellib
@@ -401,6 +407,11 @@ def shunting_yard(expression, names):
         if k in names.keys():
             t.tvalue = names[k]
 
+    # for t in tokens:
+    #     print t.tvalue, t.ttype, t.tsubtype
+
+    # print "==> ", "".join([t.tvalue for t in tokens]) 
+
 
     #http://office.microsoft.com/en-us/excel-help/calculation-operators-and-precedence-HP010078886.aspx
     operators = {}
@@ -436,7 +447,6 @@ def shunting_yard(expression, names):
                 were_values.append(True)
                 
         elif t.ttype == "function":
-
             stack.append(t)
             arg_count.append(0)
             if were_values:
@@ -445,7 +455,7 @@ def shunting_yard(expression, names):
             were_values.append(False)
             
         elif t.ttype == "argument":
-            
+
             while stack and (stack[-1].tsubtype != "start"):
                 output.append(create_node(stack.pop()))   
             
@@ -483,7 +493,7 @@ def shunting_yard(expression, names):
             stack.append(t)
             
         elif t.tsubtype == "stop":
-            
+
             while stack and stack[-1].tsubtype != "start":
                 output.append(create_node(stack.pop()))
             
@@ -508,7 +518,7 @@ def shunting_yard(expression, names):
         output.append(create_node(stack.pop()))
 
     #print "Stack is: ", "|".join(stack)
-    #print "Ouput is: ", "|".join([x.tvalue for x in output])
+    # print "Ouput is: ", "|".join([x.tvalue for x in output])
     
     # convert to list
     result = [x for x in output]
@@ -777,7 +787,7 @@ if __name__ == '__main__':
         print "**************************************************"
         print "Formula: ", i
 
-        e = shunting_yard(i);
+        e = shunting_yard(i, {});
         print "RPN: ",  "|".join([str(x) for x in e])
         
         G,root = build_ast(e)
