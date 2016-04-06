@@ -138,18 +138,18 @@ class Spreadsheet(object):
         def eval_range(rng):
             return self.evaluate_range(rng)
                 
-        # try:
-        print "Evalling: %s, %s" % (cell.address(),cell.python_expression)
-        exec(cell.compiled_expression, globals)
-        #print "Cell %s evalled to %s" % (cell.address(),vv_from_exec)
-        if vv_from_exec is None:
-            print "WARNING %s is None" % (cell.address())
-        cell.value = vv_from_exec
-        # except Exception as e:
-        #     if e.message.startswith("Problem evalling"):
-        #         raise e
-        #     else:
-        #         raise Exception("Problem evalling: %s for %s, %s" % (e,cell.address(),cell.python_expression)) 
+        try:
+            print "Evalling: %s, %s" % (cell.address(),cell.python_expression)
+            vv = eval(cell.compiled_expression)
+            #print "Cell %s evalled to %s" % (cell.address(),vv)
+            if vv is None:
+                print "WARNING %s is None" % (cell.address())
+            cell.value = vv
+        except Exception as e:
+            if e.message.startswith("Problem evalling"):
+                raise e
+            else:
+                raise Exception("Problem evalling: %s for %s, %s" % (e,cell.address(),cell.python_expression)) 
         
         return cell.value
 
@@ -289,35 +289,23 @@ class FunctionNode(ASTNode):
         elif fun == "pi":
             # constant, no parens
             str = "pi"
-        elif fun == "iferror":
-            # str = "(%s if %s else %s)" % (args[0].emit(ast,context=context),args[0].emit(ast,context=context),args[1].emit(ast,context=context))
-            # str = "try:\n\treturn %s\nexcept:\n\treturn %s\n" % (args[0].emit(ast,context=context), args[1].emit(ast,context=context))
-            str = textwrap.dedent('''\
+        # elif fun == "iferror":
+        #     # str = "(%s if %s else %s)" % (args[0].emit(ast,context=context),args[0].emit(ast,context=context),args[1].emit(ast,context=context))
+        #     # str = "try:\n\treturn %s\nexcept:\n\treturn %s\n" % (args[0].emit(ast,context=context), args[1].emit(ast,context=context))
+        #     str = textwrap.dedent('''try:
+        #             return %s
+        #         except:
+        #             return %s''' % (args[0].emit(ast,context=context), args[1].emit(ast,context=context)))
+        # elif fun == "match":
 
-                try:
-                    return %s
-                except:
-                    return %s
-                
-            ''' % (args[0].emit(ast,context=context), args[1].emit(ast,context=context)))
-        elif fun == "match":
+        #     str = textwrap.dedent('''match(%(lookup_value)s, %(lookup_array)s, %(match_type)s)''' 
+        #         % {"lookup_value": args[0].emit(ast,context=context), 
+        #            "lookup_array": args[1].emit(ast,context=context),
+        #            "match_type": args[2].emit(ast,context=context)})
 
-            str = textwrap.dedent('''\
+        # elif fun == "offset":
 
-                match(%(lookup_value)s, %(lookup_array)s, %(match_type)s)
-
-                
-            ''' % {"lookup_value": args[0].emit(ast,context=context), 
-                   "lookup_array": args[1].emit(ast,context=context),
-                   "match_type": args[2].emit(ast,context=context)})
-
-        elif fun == "offset":
-
-            str = textwrap.dedent('''\
-
-                offset(%s, 0, 0)
-                
-            ''' % args[0].emit(ast,context=context))
+        #     str = textwrap.dedent('''offset(%s, 0, 0)''' % args[0].emit(ast,context=context))
 
         elif fun == "if":
             # inline the if
@@ -636,7 +624,6 @@ class ExcelCompiler(object):
         else:
             ast = None
             code = str('"' + cell.value + '"' if isinstance(cell.value,unicode) else cell.value)
-            
         return code,ast
 
     def add_node_to_graph(self,G, n):
@@ -818,7 +805,8 @@ if __name__ == '__main__':
               '=LINEST(B32:(INDEX(B32:B119,MATCH(0,B32:B119,-1),1)),(F32:(INDEX(B32:F119,MATCH(0,B32:B119,-1),5)))^{1,2,3,4})',
               '=IFERROR(10,11)',
               '=MATCH(InputData!G15,InputData!L5:DG5,0)',
-              '=IFERROR(IF(InputData!G14>=InputData!G15,0,AVERAGE(L52:OFFSET(K52,0,MATCH(InputData!G15,InputData!L5:DG5,0)))),0%)'
+              #'=IFERROR(IF(InputData!G14>=InputData!G15,0,AVERAGE(L52:OFFSET(K52,0,MATCH(InputData!G15,InputData!L5:DG5,0)))),0%)'
+              '=OFFSET(K52,0,MATCH(InputData!G15,InputData!L5:DG5,0))'
               ]
 
     for i in inputs:
@@ -829,6 +817,6 @@ if __name__ == '__main__':
         print "RPN: ",  "|".join([str(x) for x in e])
         
         G,root = build_ast(e)
-        
+
         print "Python code: ", root.emit(G,context=None)
         print "**************************************************"

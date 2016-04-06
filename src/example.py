@@ -20,15 +20,15 @@ if __name__ == '__main__':
     c = ExcelCompiler(filename=fname)
     
     print "Compiling..., starting from D4"
-    sp = c.gen_graph('D4',sheet='Sheet1')
+    sp = c.gen_graph('D5',sheet='Sheet1')
 
     # test evaluation
-    print "D4 is %s" % sp.evaluate('Sheet1!D4')
+    print "D4 is %s" % sp.evaluate('Sheet1!D5')
     
     print "Setting A1 to 200"
     sp.set_value('Sheet1!A1',200)
     
-    print "D4 is now %s (the same should happen in Excel)" % sp.evaluate('Sheet1!D4')
+    print "D4 is now %s (the same should happen in Excel)" % sp.evaluate('Sheet1!D5')
     
     # show the graph usisng matplotlib
     print "Plotting using matplotlib..."

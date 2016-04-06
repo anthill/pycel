@@ -152,7 +152,7 @@ class Cell(object):
             self.python_expression='"' + self.python_expression + '"'
         
         try:
-            self._compiled_expression = compile('vv_from_exec = '+ self.python_expression+'\n','<string>','exec')
+            self._compiled_expression = compile(self.python_expression,'<string>','eval')
         except Exception as e:
             raise Exception("Failed to compile cell %s with expression %s: %s" % (self.address(),self.python_expression,e)) 
     
