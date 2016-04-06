@@ -167,5 +167,51 @@ def npv(*args):
     cashflow = args[1]
     return sum([float(x)*(1+discount_rate)**-(i+1) for (i,x) in enumerate(cashflow)])
 
+def match(*args):
+    return 2
+    lookup_value = args[0]
+    lookup_array = args[1]
+    if args[2]:
+        match_type = args[2]
+    else:
+        match_type = 1
+
+    print "entering match"
+    if match_type == 1:
+        # Verify ascending sort
+        posMax = -1
+        for i in range((len(lookup_array)-1)):
+            if i is not len(lookup_array)-1 and lookup_array[i] > lookup_array[i+1]:
+                raise ('for match_type 0, lookup_array must be sorted ascending')
+            if (posMax == -1 or lookup_array[posMax] < lookup_array[i]) and lookup_array[i] <= lookup_value:
+                posMax = i 
+        if posMax == -1:
+            raise ('no result in lookup_array for match_type 0')
+        print "llll=", posMax + 1
+        return posMax +1 #Excel starts at 1
+
+    elif match_type == 0:
+        # No string wildcard and not automatic cast
+        print "llll= ", [str(x).lower() for x in lookup_array].index(str(lookup_value).lower())
+        return [str(x).lower() for x in lookup_array].index(str(lookup_value).lower())
+
+    elif match_type == -1:
+        # Verify descending sort
+        posMin = -1
+        for i in range((len(lookup_array)-1)):
+            if i is not len(lookup_array)-1 and lookup_array[i] < lookup_array[i+1]:
+               raise ('for match_type 0, lookup_array must be sorted descending')
+            if (posMin == -1 or lookup_array[posMax] > lookup_array[i]) and lookup_array[i] >= lookup_value:
+               posMin = i 
+        if posMin == -1:
+            raise ('no result in lookup_array for match_type 0')
+        return posMin +1 #Excel starts at 1
+
+def offset(*args):
+    return args[0]
+
+def average(*args):
+    return args[0]
+
 if __name__ == '__main__':
     pass

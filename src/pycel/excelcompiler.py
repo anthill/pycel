@@ -15,6 +15,7 @@ except:
     sys.path.insert(0, path)
     from pycel.excelwrapper import ExcelOpxWrapper as ExcelWrapperImpl
 
+import textwrap
 import excellib
 from excellib import *
 from excelutil import *
@@ -137,18 +138,18 @@ class Spreadsheet(object):
         def eval_range(rng):
             return self.evaluate_range(rng)
                 
-        try:
-            print "Evalling: %s, %s" % (cell.address(),cell.python_expression)
-            vv = eval(cell.compiled_expression)
-            #print "Cell %s evalled to %s" % (cell.address(),vv)
-            if vv is None:
-                print "WARNING %s is None" % (cell.address())
-            cell.value = vv
-        except Exception as e:
-            if e.message.startswith("Problem evalling"):
-                raise e
-            else:
-                raise Exception("Problem evalling: %s for %s, %s" % (e,cell.address(),cell.python_expression)) 
+        # try:
+        print "Evalling: %s, %s" % (cell.address(),cell.python_expression)
+        exec(cell.compiled_expression, globals)
+        #print "Cell %s evalled to %s" % (cell.address(),vv_from_exec)
+        if vv_from_exec is None:
+            print "WARNING %s is None" % (cell.address())
+        cell.value = vv_from_exec
+        # except Exception as e:
+        #     if e.message.startswith("Problem evalling"):
+        #         raise e
+        #     else:
+        #         raise Exception("Problem evalling: %s for %s, %s" % (e,cell.address(),cell.python_expression)) 
         
         return cell.value
 
@@ -288,6 +289,36 @@ class FunctionNode(ASTNode):
         elif fun == "pi":
             # constant, no parens
             str = "pi"
+        elif fun == "iferror":
+            # str = "(%s if %s else %s)" % (args[0].emit(ast,context=context),args[0].emit(ast,context=context),args[1].emit(ast,context=context))
+            # str = "try:\n\treturn %s\nexcept:\n\treturn %s\n" % (args[0].emit(ast,context=context), args[1].emit(ast,context=context))
+            str = textwrap.dedent('''\
+
+                try:
+                    return %s
+                except:
+                    return %s
+                
+            ''' % (args[0].emit(ast,context=context), args[1].emit(ast,context=context)))
+        elif fun == "match":
+
+            str = textwrap.dedent('''\
+
+                match(%(lookup_value)s, %(lookup_array)s, %(match_type)s)
+
+                
+            ''' % {"lookup_value": args[0].emit(ast,context=context), 
+                   "lookup_array": args[1].emit(ast,context=context),
+                   "match_type": args[2].emit(ast,context=context)})
+
+        elif fun == "offset":
+
+            str = textwrap.dedent('''\
+
+                offset(%s, 0, 0)
+                
+            ''' % args[0].emit(ast,context=context))
+
         elif fun == "if":
             # inline the if
             if len(args) == 2:
@@ -341,6 +372,7 @@ class FunctionNode(ASTNode):
             str = "any([" + ",".join([n.emit(ast,context=context) for n in args]) + "])"
         else:
             # map to the correct name
+            print "funmap called with ", fun
             f = self.funmap.get(fun,fun)
             str = f + "(" + ",".join([n.emit(ast,context=context) for n in args]) + ")"
 
@@ -377,6 +409,9 @@ def shunting_yard(expression, names):
     #remove leading =
     if expression.startswith('='):
         expression = expression[1:]
+
+    #remove %
+    expression = expression.replace("%", "")
         
     p = ExcelParser();
     p.parse(expression)
@@ -410,7 +445,7 @@ def shunting_yard(expression, names):
     # for t in tokens:
     #     print t.tvalue, t.ttype, t.tsubtype
 
-    # print "==> ", "".join([t.tvalue for t in tokens]) 
+    print "==> ", "".join([t.tvalue for t in tokens]) 
 
 
     #http://office.microsoft.com/en-us/excel-help/calculation-operators-and-precedence-HP010078886.aspx
@@ -781,6 +816,9 @@ if __name__ == '__main__':
               '=LINEST(G2:G17,E2:E17,FALSE)',
               '=IF(AI119="","",E119)',
               '=LINEST(B32:(INDEX(B32:B119,MATCH(0,B32:B119,-1),1)),(F32:(INDEX(B32:F119,MATCH(0,B32:B119,-1),5)))^{1,2,3,4})',
+              '=IFERROR(10,11)',
+              '=MATCH(InputData!G15,InputData!L5:DG5,0)',
+              '=IFERROR(IF(InputData!G14>=InputData!G15,0,AVERAGE(L52:OFFSET(K52,0,MATCH(InputData!G15,InputData!L5:DG5,0)))),0%)'
               ]
 
     for i in inputs:
