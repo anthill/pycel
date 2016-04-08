@@ -455,7 +455,7 @@ def shunting_yard(expression, names):
 
     #http://office.microsoft.com/en-us/excel-help/calculation-operators-and-precedence-HP010078886.aspx
     operators = {}
-    operators[':'] = Operator(':',1,'left')
+    operators[':'] = Operator(':',8,'left')
     operators[''] = Operator(' ',8,'left')
     operators[','] = Operator(',',8,'left')
     operators['u-'] = Operator('u-',7,'left') #unary negation
