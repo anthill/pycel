@@ -4,7 +4,12 @@ Python equivalents of various excel functions
 from __future__ import division
 import numpy as np
 from math import log
-from pycel.excelutil import flatten
+from pycel.excelutil import (
+    flatten, 
+    split_address, 
+    col2num, 
+    index2addres
+)
 
 ######################################################################################
 # A dictionary that maps excel function names onto python equivalents. You should
@@ -47,7 +52,7 @@ def xlog(a):
 
 def xmax(*args):
     # ignore non numeric cells
-    data = [x for x in flatten(args) if isinstance(x,(int,float))]
+    data = [x for x in flatten(args) if isinstance(x,(int,float,long))]
     
     # however, if no non numeric cells, return zero (is what excel does)
     if len(data) < 1:
@@ -57,7 +62,7 @@ def xmax(*args):
 
 def xmin(*args):
     # ignore non numeric cells
-    data = [x for x in flatten(args) if isinstance(x,(int,float))]
+    data = [x for x in flatten(args) if isinstance(x,(int,float,long))]
     
     # however, if no non numeric cells, return zero (is what excel does)
     if len(data) < 1:
@@ -67,8 +72,7 @@ def xmin(*args):
 
 def xsum(*args):
     # ignore non numeric cells
-    data = [x for x in flatten(args) if isinstance(x,(int,float))]
-    
+    data = [x for x in flatten(args) if isinstance(x,(int,float,long))]
     # however, if no non numeric cells, return zero (is what excel does)
     if len(data) < 1:
         return 0
@@ -109,7 +113,7 @@ def index(*args):
 def lookup(value, lookup_range, result_range):
     
     # TODO
-    if not isinstance(value,(int,float)):
+    if not isinstance(value,(int,float,long)):
         raise Exception("Non numeric lookups (%s) not supported" % value)
     
     # TODO: note, may return the last equal value
@@ -117,7 +121,7 @@ def lookup(value, lookup_range, result_range):
     # index of the last numeric value
     lastnum = -1
     for i,v in enumerate(lookup_range):
-        if isinstance(v,(int,float)):
+        if isinstance(v,(int,float,long)):
             if v > value:
                 break
             else:
@@ -197,10 +201,10 @@ def match(lookup_value, lookup_array, match_type=1):
             raise Exception('no result in lookup_array for match_type 0')
         return posMin +1 #Excel starts at 1
 
-# TODO functions
+def offset(address, delta_r, delta_c):
+    sh,c,r = split_address(address)
+    return index2addres(col2num(c)+delta_c,int(r)+delta_r,sh)
 
-#def offset(*args):
-#    return args[0]
 
 if __name__ == '__main__':
     pass

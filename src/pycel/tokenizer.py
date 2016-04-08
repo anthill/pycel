@@ -377,7 +377,7 @@ class ExcelParser(ExcelParserTokens):
                 continue
     
             # standard infix operators
-            if ("+-*/^&=><".find(currentChar()) != -1):
+            if ("+-*/^&=><:".find(currentChar()) != -1):
                 if (len(token) > 0):
                     tokens.add(token, self.TOK_TYPE_OPERAND)
                     token = ""
@@ -672,10 +672,10 @@ def shunting_yard(expression):
         print "stack:", "|".join([x.tvalue for x in stack])
     
     for t in tokens:
+        print t, t.type
         if t.ttype == "operand":
             
             output.append(create_node(t))
-
             if were_values:
                 were_values.pop()
                 were_values.append(True)
@@ -752,5 +752,5 @@ def shunting_yard(expression):
         output.append(create_node(stack.pop()))
 
     #print "Stack is: ", "|".join(stack)
-    #print "Ouput is: ", "|".join([x.tvalue for x in output])
+    print "Output is: ", "|".join([x.tvalue for x in output])
     return output
