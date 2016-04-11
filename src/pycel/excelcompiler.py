@@ -135,10 +135,22 @@ class Spreadsheet(object):
         def eval_cell(address):
             return self.evaluate(address)
         
-        def eval_range(rng):
-            return self.evaluate_range(rng)
+        def eval_range(rng, rng2=None):
+            if rng2 is None:
+                return self.evaluate_range(rng)
+            else:
+                sheet = rng.split('!')[0]
+                if '!' in rng2:
+                    rng2 = rng2.split('!')[1]
+                for s in self.cellmap:
+                    print self.cellmap[s]
+                #return eval_range('%s:%s' % (rng, rng2))
+                return self.evaluate_range(CellRange('%s:%s' % (rng, rng2),sheet), False)
                 
         try:
+            #for s in self.cellmap:
+            #    print self.cellmap[s]
+
             print "Evalling: %s, %s" % (cell.address(),cell.python_expression)
             vv = eval(cell.compiled_expression)
             #print "Cell %s evalled to %s" % (cell.address(),vv)
@@ -198,6 +210,10 @@ class OperatorNode(ASTNode):
         
         op = self.opmap.get(xop,xop)
         
+        # convert ":" operator to a range function
+        if op == ":": 
+            return "eval_range(%s)" % ','.join([a.emit(ast,context=context) for a in args])
+         
         if self.ttype == "operator-prefix":
             return "-" + args[0].emit(ast,context=context)
 
@@ -217,11 +233,12 @@ class OperatorNode(ASTNode):
             ss =  args[0].emit(ast,context=context) + op + "(" + aa + " if " + aa + " is not None else float('inf'))"
         else:
             ss = args[0].emit(ast,context=context) + op + args[1].emit(ast,context=context)
-        
+                    
+
         #avoid needless parentheses
         if parent and not isinstance(parent,FunctionNode):
-            ss = "("+ ss + ")" 
-        
+            ss = "("+ ss + ")"          
+
         return ss
 
 class OperandNode(ASTNode):
@@ -248,23 +265,41 @@ class RangeNode(OperandNode):
         return resolve_range(self.tvalue)[0]
     
     def emit(self,ast,context=None):
+
         # resolve the range into cells
         rng = self.tvalue.replace('$','')
-
         sheet = context.curcell.sheet + "!" if context else ""
-        if is_range(rng):
+
+        is_a_range = is_range(rng)
+
+        if is_a_range:
             sh,start,end = split_range(rng)
-            if sh:
-                str = 'eval_range("' + rng + '")'
-            else:
-                str = 'eval_range("' + sheet + rng + '")'
         else:
             sh,col,row = split_address(rng)
-            if sh:
-                str = 'eval_cell("' + rng + '")'
-            else:
-                str = 'eval_cell("' + sheet + rng + '")'
-                
+
+        if sh:
+            str = '"' + rng + '"'
+        else:
+            str = '"' + sheet + rng + '"'
+
+
+        to_eval = True
+        # exception for formulas which use the address and not it content as ":" or "OFFSET"
+        parent = self.parent(ast)
+        # for OFFSET, it will also depends on the position in the formula (1st position required)
+        if (parent is not None and
+            (parent.tvalue == ':' or 
+            (parent.tvalue == 'OFFSET' and 
+             parent.children(ast)[0] == self))):
+            to_eval = False
+                        
+        if to_eval == False:
+            return str
+        elif is_a_range:
+            return 'eval_range(' + str + ')'
+        else:
+            return 'eval_cell(' + str + ')'
+        
         return str
     
 class FunctionNode(ASTNode):
@@ -289,24 +324,6 @@ class FunctionNode(ASTNode):
         elif fun == "pi":
             # constant, no parens
             str = "pi"
-        # elif fun == "iferror":
-        #     # str = "(%s if %s else %s)" % (args[0].emit(ast,context=context),args[0].emit(ast,context=context),args[1].emit(ast,context=context))
-        #     # str = "try:\n\treturn %s\nexcept:\n\treturn %s\n" % (args[0].emit(ast,context=context), args[1].emit(ast,context=context))
-        #     str = textwrap.dedent('''try:
-        #             return %s
-        #         except:
-        #             return %s''' % (args[0].emit(ast,context=context), args[1].emit(ast,context=context)))
-        # elif fun == "match":
-
-        #     str = textwrap.dedent('''match(%(lookup_value)s, %(lookup_array)s, %(match_type)s)''' 
-        #         % {"lookup_value": args[0].emit(ast,context=context), 
-        #            "lookup_array": args[1].emit(ast,context=context),
-        #            "match_type": args[2].emit(ast,context=context)})
-
-        # elif fun == "offset":
-
-        #     str = textwrap.dedent('''offset(%s, 0, 0)''' % args[0].emit(ast,context=context))
-
         elif fun == "if":
             # inline the if
             if len(args) == 2:
@@ -433,7 +450,7 @@ def shunting_yard(expression, names):
     # for t in tokens:
     #     print t.tvalue, t.ttype, t.tsubtype
 
-    print "==> ", "".join([t.tvalue for t in tokens]) 
+    #print "==> ", "".join([t.tvalue for t in tokens]) 
 
 
     #http://office.microsoft.com/en-us/excel-help/calculation-operators-and-precedence-HP010078886.aspx
@@ -541,7 +558,7 @@ def shunting_yard(expression, names):
         output.append(create_node(stack.pop()))
 
     #print "Stack is: ", "|".join(stack)
-    # print "Ouput is: ", "|".join([x.tvalue for x in output])
+    #print "Output is: ", "|".join([x.tvalue for x in output])
     
     # convert to list
     result = [x for x in output]
@@ -671,7 +688,6 @@ class ExcelCompiler(object):
         while todo:
             c1 = todo.pop()
             
-
             print "Handling ", c1.address()
             print c1.formula
             
@@ -685,7 +701,8 @@ class ExcelCompiler(object):
 
             # set the code & compile it (will flag problems sooner rather than later)
             c1.python_expression = pystr
-            c1.compile()                
+            c1.compile()    
+            print c1.python_expression            
             
             # get all the cells/ranges this formula refers to
             deps = [x.tvalue.replace('$','') for x in ast.nodes() if isinstance(x,RangeNode)]
@@ -760,7 +777,7 @@ if __name__ == '__main__':
     
     # some test formulas
     inputs = [
-              '=SUM((A:A 1:1))',
+              #'=SUM((A:A 1:1))',
               '=A1',
               '=atan2(A1,B1)',
               '=5*log(sin()+2)',
@@ -774,11 +791,11 @@ if __name__ == '__main__':
               '=$B$2',
               '=SUM(B5:B15)',
               '=SUM(B5:B15,D5:D15)',
-              '=SUM(B5:B15 A7:D7)',
+              #'=SUM(B5:B15 A7:D7)',
               '=SUM(sheet1!$A$1:$B$2)',
               '=[data.xls]sheet1!$A$1',
-              '=SUM((A:A,1:1))',
-              '=SUM((A:A A1:B1))',
+              #'=SUM((A:A,1:1))',
+              #'=SUM((A:A A1:B1))',
               '=SUM(D9:D11,E9:E11,F9:F11)',
               '=SUM((D9:D11,(E9:E11,F9:F11)))',
               '=IF(P5=1.0,"NA",IF(P5=2.0,"A",IF(P5=3.0,"B",IF(P5=4.0,"C",IF(P5=5.0,"D",IF(P5=6.0,"E",IF(P5=7.0,"F",IF(P5=8.0,"G"))))))))',
@@ -805,7 +822,7 @@ if __name__ == '__main__':
               '=LINEST(B32:(INDEX(B32:B119,MATCH(0,B32:B119,-1),1)),(F32:(INDEX(B32:F119,MATCH(0,B32:B119,-1),5)))^{1,2,3,4})',
               '=IFERROR(10,11)',
               '=MATCH(InputData!G15,InputData!L5:DG5,0)',
-              #'=IFERROR(IF(InputData!G14>=InputData!G15,0,AVERAGE(L52:OFFSET(K52,0,MATCH(InputData!G15,InputData!L5:DG5,0)))),0%)'
+              '=IFERROR(IF(InputData!G14>=InputData!G15,0,AVERAGE(L52:OFFSET(K52,0,MATCH(InputData!G15,InputData!L5:DG5,0)))),0%)'
               '=OFFSET(K52,0,MATCH(InputData!G15,InputData!L5:DG5,0))'
               ]
 

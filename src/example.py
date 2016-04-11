@@ -20,19 +20,19 @@ if __name__ == '__main__':
     c = ExcelCompiler(filename=fname)
     
     print "Compiling..., starting from D4"
-    sp = c.gen_graph('D5',sheet='Sheet1')
+    sp = c.gen_graph('B1',sheet='Sheet1')
 
     # test evaluation
-    print "D4 is %s" % sp.evaluate('Sheet1!D5')
+    print "B1 is %s" % sp.evaluate('Sheet1!B1')
     
     print "Setting A1 to 200"
     sp.set_value('Sheet1!A1',200)
     
-    print "D4 is now %s (the same should happen in Excel)" % sp.evaluate('Sheet1!D5')
+    print "B1 is now %s (the same should happen in Excel)" % sp.evaluate('Sheet1!B1')
     
     # show the graph usisng matplotlib
     print "Plotting using matplotlib..."
-    sp.plot_graph()
+    #sp.plot_graph()
 
     # export the graph, can be loaded by a viewer like gephi
     print "Exporting to gexf..."
