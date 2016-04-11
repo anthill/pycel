@@ -123,11 +123,16 @@ class Spreadsheet(object):
     def evaluate(self,cell,is_addr=True):
 
         if is_addr:
-            cell = self.cellmap[cell]
+            try:
+                cell = self.cellmap[cell]
+            except:
+                print 'Empty cell at '+ cell
+                return []
+
             
         # no formula, fixed value
         if not cell.formula or cell.value != None:
-            #print "  returning constant or cached value for ", cell.address()
+            #print "returning constant or cached value for ", cell.address()
             return cell.value
         
         # recalculate formula
